@@ -80,58 +80,29 @@ class mod_stickynotes_external extends external_api {
      * Returns welcome message
      * @return array = array('' => , ); welcome message
      */
-    public static function get_notes_column_select($id)
-    {
+    public static function get_notes_column_select($id) {
         global $USER;
         global $DB;
         global $CFG;
 
         $params = self::validate_parameters(
             self::get_notes_column_select_parameters(),
-                array('id'=>$id)
+                array('id' => $id)
         );
 
-		$sql = 'SELECT id, ordernote, message FROM {stickynotes_note} WHERE stickycolid = ? ORDER BY ordernote';
+        $sql = 'SELECT id, ordernote, message FROM {stickynotes_note} WHERE stickycolid = ? ORDER BY ordernote';
         $paramsdb = array($id);
         $dbresult = $DB->get_records_sql($sql, $paramsdb);
-		
-		$return[0] = array(
-		    'ordernote' => '1', 
-		    'message' => 'Au début de la colonne'
-		);	
-		
-		foreach ($dbresult as $move) {
-			$neworder = $move->ordernote+1;
-            $return[] = array('message' => "Après ".$move->message, 'ordernote' => $neworder);
-		}
-		
-		
-        // foreach ($dbresult as $value) {
-		    // $orders[] = $value->ordernote;
-		// }
-		// $keys = array_keys($dbresult);
-		// $size = count($dbresult);
 
-		// $return[0] = array(
-		    // 'ordernote' => ($orders[0] / 2), 
-		    // 'message' => 'Au début de la colonne'
-		// );
+        $return[0] = array(
+            'ordernote' => '1',
+            'message' => get_string('firstplace', 'stickynotes')
+        );
 
-		// foreach ($dbresult as $id=>$record) {
-			// $foundkey = array_search($record->id,$keys);
-			// if($foundkey !== false) {
-				// $nextkey = $foundkey+1;
-				// if($nextkey < $size) {
-					// $neworder = ($record->ordernote + $orders[$nextkey]) / 2;
-				// } else {
-					// $neworder = ($size+1) * 1000;
-				// }
-			// }	
-            // $return[] = array('message' => "Après ".$record->message, 'ordernote' -> $neworder);
-		// }
-		
-		
-
+        foreach ($dbresult as $move) {
+            $neworder = $move->ordernote + 1;
+            $return[] = array('message' => get_string('after', 'stickynotes')." '".$move->message."'", 'ordernote' => $neworder);
+        }
         return json_encode(array_values($return));
     }
 
@@ -139,12 +110,11 @@ class mod_stickynotes_external extends external_api {
      * Returns description of method parameters
      * @return external_function_parameters
      */
-    public static function get_notes_column_select_parameters()
-    {
+    public static function get_notes_column_select_parameters() {
         return new external_function_parameters(
           array(
-		      'id' => new external_value(PARAM_INT, "id")
-			  )
+              'id' => new external_value(PARAM_INT, "id")
+              )
         );
     }
 
@@ -152,9 +122,7 @@ class mod_stickynotes_external extends external_api {
      * Returns description of method result value
      * @return external_description
      */
-    public static function get_notes_column_select_returns()
-    {
+    public static function get_notes_column_select_returns() {
         return new external_value(PARAM_RAW, 'The updated JSON output');
-//        return new external_value();//new external_value(PARAM_TEXT, 'The welcome message + user first name');
     }
 }

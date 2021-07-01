@@ -37,39 +37,6 @@ $col = optional_param('col', 0, PARAM_INT);
 $confirm = optional_param('confirm', 0, PARAM_INT);
 $ordernote = optional_param('ordernote', 0, PARAM_INT);
 
-// if(!empty($ordernote)){
-	// print_r($_REQUEST); exit();
-	// } else {print_r($_REQUEST);}
-
-        // $sql = 'SELECT id, ordernote, message, stickycolid FROM {stickynotes_note} WHERE id > '.$note.' ORDER BY id ASC';
-        // $paramsdb = array();
-        // $toto = $DB->get_records_sql($sql, $paramsdb);
-		// print_object($toto);
-		// foreach ($toto as $value) 
-		// {$array[] = $value->message;}
-		// print_object($array);
-		// echo $array[2];
-		// $keys = array_keys($toto);
-		// print_object($keys);
-		// $foundkey = array_search('13',$toto);
-		// $foundkey = array_search('1-3 bordel', array_column($toto, 'message'));
-		// print('Essai : '.$foundkey);
-		// print('Note : key '.$foundkey);
-		// echo $array[$foundkey]."<br />";
-		// echo $array[$foundkey+1]."<br />";
-		// echo "<br/>";
-		
-		// $more = $foundkey+1;
-		// echo "PLUS : ".$more;
-		// $nextkey = array_search($more,$keys);
-		// echo "<br/>";
-		// print_object($keys[$more]);
-		// if($foundkey)
-			// { $res =  "Prout"; }
-		// echo "RES : ".$res;
-		// echo 'compte '.count($toto);
-		// print_object($toto[1]['message']);
-		
 // These params will be passed as hidden variables later in the form.
 $pageparams = array('edit' => $edit, 'create' => $create);
 
@@ -122,6 +89,7 @@ if (!empty($create)) {
     $post->create = 1;
     $post->choose_color = $moduleinstance->colors;
     $post->stickyid = $cm->instance;
+    $post->stickycolid = $col;
 
     // Define the page title for creating form.
     $settitle = get_column_title($col);
@@ -255,6 +223,7 @@ $formarray = array(
     'message'        => $postmessage,
     'stickycolid'    => $postcol,
     'stickyid'       => $cm->instance,
+    'ordernote'      => $ordernote,
 );
 
 $mformnote = new form_note('note.php', $formarray, 'post');
@@ -285,7 +254,7 @@ if ($fromform = $mformnote->get_data()) {
         $fromform->userid = $USER->id;
         $fromform->instance = $fromform->id;
         $fromform->id = $fromform->note;
-// print_object($fromform);exit();
+
         $returnurl = "view.php?id=".$fromform->instance;
         $updatenote = update_stickynote($fromform);
 
@@ -303,13 +272,9 @@ if ($fromform = $mformnote->get_data()) {
         // If user creates a new note.
         $fromform->userid = $USER->id;
         $returnurl = "view.php?id=".$fromform->id;
-		
-		// Count numbers of notes in this column.
-        $options = array('stickycolid' => $fromform->stickycolid);
-        $count = $DB->count_records('stickynotes_note', $options);
-        // Defines note order.
-		$fromform->ordernote = $count+1;
+        $fromform->ordernote = $ordernote;
 
+        // Finally, we can create note.
         $createnote = insert_stickynote($fromform);
 
         // Trigger note created event.

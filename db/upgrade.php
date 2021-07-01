@@ -42,34 +42,25 @@ function xmldb_stickynotes_upgrade($oldversion) {
             $dbman->add_field($table, $field);
         }
 
-		$ids = $DB->get_fieldset_sql('SELECT sn.id FROM {stickynotes} sn WHERE sn.id > 0');
+        $ids = $DB->get_fieldset_sql('SELECT sn.id FROM {stickynotes} sn WHERE sn.id > 0');
         if (!empty($ids)) {
-			// echo "Activités ";
-            // print_r($ids);
-			echo "<br/>";
             foreach ($ids as $id) {
                 $cols = $DB->get_records('stickynotes_column', array('stickyid' => $id), '', '*');
-			    // echo "Colonnes ";
-                // print_object($cols);
-			
                 foreach ($cols as $col) {
                     $notes = $DB->get_records('stickynotes_note', array('stickycolid' => $col->id), '', '*');
-			        // echo "Notes ";
-                    // print_object($notes);
-                    $i = 0;					
+                    $i = 0;
                     foreach ($notes as $note) {
                         $obj = new stdClass();
                         $obj->id = $note->id;
-                        $obj->ordernote = $i+1;
+                        $obj->ordernote = $i + 1;
                         $DB->update_record('stickynotes_note', $obj);
-						$i = $obj->ordernote;
-						// print_object($obj);
+                        $i = $obj->ordernote;
                     }
-				}
+                }
             }
-		}
+        }
     }
-    // else { echo" stop";exit();}
+
     // Sticky notes savepoint reached.
     upgrade_mod_savepoint(true, 2021051002, 'stickynotes');
 }

@@ -35,7 +35,7 @@ $functions = array(
                 'ajax'          => true,
                 'capabilities'  => 'mod/stickynotes:updateownnote'
         ),
-		
+
          'mod_stickynotes_get_notes_column_select' => array(
                 'classname'   => 'mod_stickynotes_external',
                 'methodname'  => 'get_notes_column_select',
