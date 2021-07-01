@@ -272,7 +272,7 @@ class form_note extends moodleform {
             // If editing note, display menu to change column.
             $req = $DB->get_records('stickynotes_column', array('stickyid' => $stickyid->stickyid), 'id', 'id,title');
             $options = [];
-            $options[0] = "Same column";
+            $options[0] = "NO CHANGE";
             foreach ($req as $new) {
                 $options[$new->id] = $new->title;
             }
@@ -457,10 +457,10 @@ function update_stickynote($data) {
     global $DB, $USER;
     $data = (object)$data;
     $data->timemodified = time();
-// print_object($data);exit();
+
     // First, retrieve all notes following the moved note BEFORE updating !
-    $sql = 'SELECT id, ordernote FROM {stickynotes_note} WHERE stickycolid = ? AND ordernote >= ? ORDER BY ordernote';
-    $paramsdb = array($data->stickycolid, $data->ordernote);
+    $sql = 'SELECT id, ordernote FROM {stickynotes_note} WHERE stickycolid = ? AND ordernote >= ? AND id != ? ORDER BY ordernote';
+    $paramsdb = array($data->stickycolid, $data->ordernote, $data->note);
     $dbresult = $DB->get_records_sql($sql, $paramsdb);
 
     // Now we can update the note at its new place.
