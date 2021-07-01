@@ -2,7 +2,7 @@
     <div id="columns" style="display:flex;" >
     <div id="contents" style="display:flex; width: 98%;" >
     {{#allcols}}
-        <div class="columnnote" style="width: 100%;">
+        <div id="column{{columnid}}" class="columnnote" style="width: 100%;">
         
         {{! Column title and edit icon}}
         <h4>{{title}}
@@ -22,9 +22,21 @@
         {{/capabilitycreatenote}}
 
     {{#allnotes}}
+	        {{#capabilityupdatenote}}
+                <div id="{{elementidcontainer}}" class="sticky" draggable="true" ondragstart="event.dataTransfer.setData('text/plain',null)" style="background-color:{{backgroundcolor}};">
+            {{/capabilityupdatenote}}
+            {{^capabilityupdatenote}}
                 <div id="{{elementidcontainer}}" class="sticky" style="background-color:{{backgroundcolor}};">
+            {{/capabilityupdatenote}}
                 <div id="{{elementid}}">
                     <div class="headernote">
+					    Ordre : {{ordernote}}
+	                    {{#capabilityupdatenote}}
+                            <i class="fa fa-arrows fa-fw" title="{{#str}}move_cross_pix, stickynotes{{/str}}"></i>
+                        {{/capabilityupdatenote}}	
+						{{^capabilityupdatenote}}
+						    &nbsp;
+						{{/capabilityupdatenote}}
                         {{#capability_viewauthor}}
                                {{fullname}}
                         {{/capability_viewauthor}}
@@ -37,17 +49,17 @@
                         {{#capabilityvote}}
                         {{#voteenabled}}
                             {{#myvote}}
-                                <a href="{{voteurl}}">{{# pix}}heart_full, stickynotes, {{#str}}heart_full_pix, stickynotes{{/str}}{{/ pix}}</a>
+                                <a href="{{voteurl}}"><i class="fa fa-heart" title="{{#str}}heart_full_pix, stickynotes{{/str}}"></i></a>
                             {{/myvote}}
                             {{^myvote}}
                                 {{#limitedvote}}
-                                    {{# pix}}heart_limited, stickynotes, {{#str}}heart_limited_pix, stickynotes{{/str}}{{/ pix}}
+                                    <i class="fa fa-heart-o grey" title="{{#str}}heart_limited_pix, stickynotes{{/str}}"></i>
                                 {{/limitedvote}}
                                 {{^limitedvote}}
-                                    <a href="{{voteurl}}">{{# pix}}heart_empty, stickynotes, {{#str}}heart_empty_pix, stickynotes{{/str}}{{/ pix}}</a>
+                                    <a href="{{voteurl}}"><i class="fa fa-heart-o" title="{{#str}}heart_empty_pix, stickynotes{{/str}}"></i></a>
                                 {{/limitedvote}}
                             {{/myvote}}
-                        ({{totalvotes}})
+                        {{totalvotes}}
                         {{/voteenabled}}
                         {{^voteenabled}}
                             {{! No vote enabled : nothing !}}

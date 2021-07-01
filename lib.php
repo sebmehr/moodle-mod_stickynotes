@@ -223,35 +223,70 @@ class form_note extends moodleform {
         global $CFG, $USER, $DB;
         $mform = $this->_form;
         $stickyid     = $this->_customdata['post'];
-        if ($stickyid->create = 1) {
-            $stickyid->color = 1;
+        if (isset($stickyid->create)) {
+            $stickyid->color = 'color1';
         }
-
-        $mform->addElement('text', 'message', get_string('message', 'stickynotes'), 'size="48"');
+// print_object($stickyid);
+        $mform->addElement('text', 'message', get_string('message', 'stickynotes'), 'maxlength="100" size="48"');
         $mform->setType('message', PARAM_TEXT);
         $mform->addRule('message', get_string('maximumchars', '', 100), 'maxlength', 100, 'client');
 
+        // If color choice is enabled.
         if ($stickyid->choose_color == 1) {
 
-            // If choosing color enabled, display menu to choose color.
-            $req = $DB->get_records_select_menu('stickynotes_colors', null, null, 'id', '*');
-            $mform->addElement('select', 'color', get_string('choosecolor', 'stickynotes'), $req);
-            if ($stickyid->edit = 1) {
-                $mform->setDefault('color', $stickyid->color);
-            }
-            $mform->setType('color', PARAM_INT);
-        } else {
+            // First, array the 6 colors defined for this activity.
+            $configcolor = array (
+                'color1',
+                'color2',
+                'color3',
+                'color4',
+                'color5',
+                'color6'
+            );
+            // Second, retrieve colors settings for this instance.
+            $retrievecolors = $DB->get_record('stickynotes', array('id' => $stickyid->stickyid), '*', MUST_EXIST);
 
-            // Else, default color for note.
+            $colorarray = array();
+            foreach ($configcolor as $color) {
+                if ($retrievecolors->$color == 1) {
+                    // If a color is used in instance, design a colored square and add meaning if define.
+                    $thiscolor = "<div style=\"width:50px;background-color:".get_config('mod_stickynotes', $color)
+                    ."\">&nbsp;</div>&nbsp;";
+                    $thiscolor .= $DB->get_field('stickynotes', $color.'_meaning', array('id' => $stickyid->stickyid));
+                    $thiscolor .= "\n";
+                    // Create a radio button to choose color.
+                    $colorarray[] = $mform->createElement('radio', 'color', '', $thiscolor, $color);
+                }
+            }
+            $mform->setDefault('color', $stickyid->color);
+            $mform->addGroup($colorarray, 'colorarr', get_string('choosecolorbuttons', 'stickynotes'), array('<br />'), false);
+        } else {
+            // Else, default color for note is always color 1.
             $mform->addElement('hidden', 'color');
-            $mform->setType('color', PARAM_INT);
+            $mform->setType('color', PARAM_TEXT);
+            $mform->setDefault('color',  'color1');
         }
 
         if (isset($stickyid->stickyid)) {
-
             // If editing note, display menu to change column.
-            $req = $DB->get_records_select_menu('stickynotes_column', "stickyid =".$stickyid->stickyid, null, 'id', 'id,title');
-            $mform->addElement('select', 'stickycolid', get_string('changecolumn', 'stickynotes'), $req);
+            $req = $DB->get_records('stickynotes_column',array('stickyid' => $stickyid->stickyid),'id', 'id,title');
+			$options = [];
+			$options[0] = "no changes";
+			foreach($req AS $new) {
+                $options[$new->id] = $new->title;
+            }
+		
+            $mform->addElement('select', 'stickycolid', get_string('changecolumn', 'stickynotes'), $options);
+            $mform->setType('stickycolid', PARAM_INT);
+            $mform->setDefault('stickycolid', 0);
+
+            $optionsorder= [];
+            $mform->addElement('select', 'selectorder', 'Ordre', $optionsorder);
+            $mform->setType('selectorder', PARAM_INT);
+            $mform->setDefault('selectorder', 0);	
+
+            $mform->addElement('hidden', 'ordernote');
+            $mform->setType('ordernote', PARAM_INT);
         } else {
             // Else, default value for column.
             $mform->addElement('hidden', 'stickycolid');
@@ -279,7 +314,7 @@ class form_note extends moodleform {
         // Stickynote id.
         $mform->addElement('hidden', 'note');
         $mform->setType('note', PARAM_INT);
-
+		
         $this->add_action_buttons(true, get_string('validate', 'stickynotes'));
     }
 
@@ -296,7 +331,6 @@ class form_note extends moodleform {
         if (empty($data['message'])) {
             $errors['message'] = get_string('erroremptymessage', 'stickynotes');
         }
-
         return $errors;
     }
 }
@@ -372,8 +406,8 @@ function insert_stickynote($data) {
     $data = (object)$data;
     $data->timecreated = time();
 
-    $DB->insert_record('stickynotes_note', $data);
-    return true;
+    $res = $DB->insert_record('stickynotes_note', $data);
+    return $res;
 }
  /**
   * Updates a note
@@ -385,6 +419,14 @@ function update_stickynote($data) {
     global $DB, $USER;
     $data = (object)$data;
     $data->timemodified = time();
+print_object($data);
+
+$sql = 'SELECT * FROM {stickynotes_note} WHERE stickycolid = ? AND ordernote >= ?ORDER BY ordernote';
+$paramsdb = array($data->stickycolid, $data->ordernote);
+$dbresult = $DB->get_records_sql($sql, $paramsdb);
+print_object($dbresult);
+
+exit();
     $res = $DB->update_record('stickynotes_note', $data);
 
     $post = new StdClass;
@@ -475,6 +517,21 @@ function stickynote_count_votes($note) {
     global $DB;
     $count = $DB->count_records('stickynotes_vote', array ('stickynoteid' => $note));
      return $count;
+}
+ /**
+  * Search column title.
+  * @param int $col  Column id.
+  * @return array
+  */
+function get_column_title($col) {
+    global $DB;
+    $record = $DB->get_record('stickynotes_column', array('id' => $col));
+    if (!$record) {
+        return;
+    } else {
+        $column['title'] = $record->title;
+    }
+    return $column;
 }
  /**
   * Defines icon to display for a note for a "Like" vote type.

@@ -66,6 +66,7 @@ $PAGE->set_url('/mod/stickynotes/view.php', array('id' => $cm->id));
 $PAGE->set_title(format_string($moduleinstance->name));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($modulecontext);
+$PAGE->requires->js_call_amd('mod_stickynotes/dragndrop', 'init');
 
 // Define some capabilities.
 $capabilitycreatenote = false;
@@ -113,10 +114,10 @@ foreach ($cols as $col) {
 
     // For each note, retrieve and define all necessary information.
     foreach ($notes as $note) {
-        // Count number of votes for this note.
-
+        // Retieve author of the note.
         $getname = $DB->get_record('user', array('id' => $note->userid));
         $note->fullname = $getname->lastname." ".$getname->firstname;
+        // Count number of votes for this note.
         $note->totalvotes = stickynote_count_votes($note->id);
 
         // If vote is enabled, check if user has voted for this note.
@@ -135,10 +136,16 @@ foreach ($cols as $col) {
 
         // Defines elements for CSS.
         $note->elementid = 'element'.$note->id;
-        $note->elementidcontainer = 'element'.$note->id.'container';
 
-        $getcolor = $DB->get_record('stickynotes_colors', array('id' => $note->color));
-        $note->backgroundcolor = $getcolor->color;
+        // Check if rotate is enabled to apply the style with or without notes random rotation.
+        if ($moduleinstance->rotate == 1) {
+            $note->elementidcontainer = 'element'.$note->id.'container';
+        } else {
+            $note->elementidcontainer = 'element'.$note->id.'normal';
+        }
+        // Get background color from plugin settings.
+        $getcolor = get_config('mod_stickynotes', $note->color);
+        $note->backgroundcolor = $getcolor;
 
         // Define capabilities for edit and delete note.
         if ((!has_capability('mod/stickynotes:updateanynote', $modulecontext))
@@ -169,7 +176,7 @@ foreach ($cols as $col) {
         $allnotes[] = (array)$note;
     }
     $notescol = new StdClass;
-
+    $notescol->columnid = $col->id;
     $notescol->allnotes = $allnotes;
     // Create URL to create note.
     $notescol->createnoteurl = $CFG->wwwroot . '/mod/stickynotes/note.php?id='.$id.'&create=1&col=' . $col->id;
@@ -184,11 +191,11 @@ foreach ($cols as $col) {
 // All informations are set.
 $all = new StdClass;
 $all->allcols = $allcols;
-$all->createcolumnurl = $CFG->wwwroot . '/mod/stickynotes/column.php?id='.$id.'&create=1';
 
-// Check capability for manage columns.
+// Check capability for manage columns and define URL to create column.
 if (has_capability('mod/stickynotes:managecolumn', $modulecontext)) {
     $all->capability_managecolumn = true;
+    $all->createcolumnurl = $CFG->wwwroot . '/mod/stickynotes/column.php?id='.$id.'&create=1';
 }
 $all->capabilitycreatenote = $capabilitycreatenote;
 $all->capabilityvote = $capabilityvote;
@@ -214,6 +221,7 @@ if ($moduleinstance->limitstickynotes == 1) {
 }
 
 $output = $PAGE->get_renderer('mod_stickynotes');
+
 echo $output->render_notes_list($all);
 
 echo $OUTPUT->footer();

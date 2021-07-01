@@ -25,6 +25,7 @@
 require(__DIR__.'/../../config.php');
 require_once(__DIR__.'/lib.php');
 require_once(__DIR__.'/../../lib/outputcomponents.php');
+$PAGE->requires->js('/mod/stickynotes/assets/js_select.js');
 global $DB, $USER;
 
 // Declare optional parameters.
@@ -34,7 +35,41 @@ $delete = optional_param('delete', 0, PARAM_INT);
 $note = optional_param('note', 0, PARAM_INT);
 $col = optional_param('col', 0, PARAM_INT);
 $confirm = optional_param('confirm', 0, PARAM_INT);
+$ordernote = optional_param('ordernote', 0, PARAM_INT);
 
+// if(!empty($ordernote)){
+	// print_r($_REQUEST); exit();
+	// } else {print_r($_REQUEST);}
+
+        // $sql = 'SELECT id, ordernote, message, stickycolid FROM {stickynotes_note} WHERE id > '.$note.' ORDER BY id ASC';
+        // $paramsdb = array();
+        // $toto = $DB->get_records_sql($sql, $paramsdb);
+		// print_object($toto);
+		// foreach ($toto as $value) 
+		// {$array[] = $value->message;}
+		// print_object($array);
+		// echo $array[2];
+		// $keys = array_keys($toto);
+		// print_object($keys);
+		// $foundkey = array_search('13',$toto);
+		// $foundkey = array_search('1-3 bordel', array_column($toto, 'message'));
+		// print('Essai : '.$foundkey);
+		// print('Note : key '.$foundkey);
+		// echo $array[$foundkey]."<br />";
+		// echo $array[$foundkey+1]."<br />";
+		// echo "<br/>";
+		
+		// $more = $foundkey+1;
+		// echo "PLUS : ".$more;
+		// $nextkey = array_search($more,$keys);
+		// echo "<br/>";
+		// print_object($keys[$more]);
+		// if($foundkey)
+			// { $res =  "Prout"; }
+		// echo "RES : ".$res;
+		// echo 'compte '.count($toto);
+		// print_object($toto[1]['message']);
+		
 // These params will be passed as hidden variables later in the form.
 $pageparams = array('edit' => $edit, 'create' => $create);
 
@@ -86,7 +121,11 @@ if (!empty($create)) {
     $post->message = '';
     $post->create = 1;
     $post->choose_color = $moduleinstance->colors;
-    $stickyid = $cm->instance;
+    $post->stickyid = $cm->instance;
+
+    // Define the page title for creating form.
+    $settitle = get_column_title($col);
+    $pagetitle = (get_string('createnote_title', 'stickynotes')).'"'.$settitle['title'].'"';
 
 } else if ($edit) {
     // Case 2 : user edits a note
@@ -122,7 +161,10 @@ if (!empty($create)) {
     $post->course = $course->id;
     $post->message = $post->message;
     $post->choose_color = $moduleinstance->colors;
-    $stickyid = $cm->instance;
+
+    // Define the page title for creating form.
+    $pagetitle = (get_string('updatenote_title', 'stickynotes'));
+
 } else if ($delete) {
     // Case 3 : user deletes a note.
     // Retrieve the related coursemodule.
@@ -155,6 +197,15 @@ if (!empty($create)) {
     // User has confirmed deletion : note is deleted.
     if (!empty($confirm) AND confirm_sesskey()) {
         delete_stickynote($note, $modulecontext);
+
+        // Trigger note deleted event.
+        $params = array(
+            'context'  => $modulecontext,
+            'objectid' => $note
+            );
+        $event = \mod_stickynotes\event\note_deleted::create($params);
+        $event->trigger();
+
         $returnurl = "view.php?id=".$cm->id;
         redirect($returnurl);
     } else {
@@ -234,16 +285,41 @@ if ($fromform = $mformnote->get_data()) {
         $fromform->userid = $USER->id;
         $fromform->instance = $fromform->id;
         $fromform->id = $fromform->note;
-
+// print_object($fromform);exit();
         $returnurl = "view.php?id=".$fromform->instance;
-        update_stickynote($fromform);
+        $updatenote = update_stickynote($fromform);
+
+         // Trigger note updated event.
+        $params = array(
+            'context'  => $modulecontext,
+            'objectid' => $fromform->id
+            );
+        $event = \mod_stickynotes\event\note_updated::create($params);
+        $event->trigger();
+
         redirect($returnurl);
         exit();
     } else if ($fromform->create) {
         // If user creates a new note.
         $fromform->userid = $USER->id;
         $returnurl = "view.php?id=".$fromform->id;
-        insert_stickynote($fromform);
+		
+		// Count numbers of notes in this column.
+        $options = array('stickycolid' => $fromform->stickycolid);
+        $count = $DB->count_records('stickynotes_note', $options);
+        // Defines note order.
+		$fromform->ordernote = $count+1;
+
+        $createnote = insert_stickynote($fromform);
+
+        // Trigger note created event.
+        $params = array(
+            'context'  => $modulecontext,
+            'objectid' => $createnote
+            );
+        $event = \mod_stickynotes\event\note_created::create($params);
+        $event->trigger();
+
         redirect($returnurl);
         exit();
     }
@@ -255,7 +331,7 @@ $PAGE->set_heading(format_string($course->fullname));
 
 // Display  header.
 echo $OUTPUT->header();
-echo $OUTPUT->heading($cm->name);
+echo $OUTPUT->heading($pagetitle);
 
 $mformnote->display();
 
