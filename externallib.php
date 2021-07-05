@@ -46,18 +46,28 @@ class mod_stickynotes_external extends external_api {
 
         try {
             $transaction = $DB->start_delegated_transaction();
-
-            $paramdb = array($newcolumnid, $newindex);
-            $DB->execute("UPDATE {stickynotes_note} SET ordernote = ordernote + 1
-                            WHERE stickycolid = ? AND ordernote >= ?", $paramdb);
                             
-            $DB->update_record('stickynotes_note', $newdata);
-
             if ($oldcolumnid != $newcolumnid) {
-                $paramdb = array($oldcolumnid, $oldindex);
+                $DB->execute("UPDATE {stickynotes_note} SET ordernote = ordernote + 1
+                    WHERE stickycolid = ? AND ordernote >= ?", array($newcolumnid, $newindex));
+
                 $DB->execute("UPDATE {stickynotes_note} SET ordernote = ordernote - 1
-                                WHERE stickycolid = ? AND ordernote > ?", $paramdb);
-            } 
+                    WHERE stickycolid = ? AND ordernote > ?", array($oldcolumnid, $oldindex));
+            } else {
+                if ($newindex < $oldindex) {
+
+                    $DB->execute("UPDATE {stickynotes_note} SET ordernote = ordernote + 1
+                    WHERE stickycolid = ? AND ordernote < ? AND ordernote >= ?", array($newcolumnid, $oldindex, $newindex));
+
+                } else {
+
+                    $DB->execute("UPDATE {stickynotes_note} SET ordernote = ordernote - 1
+                    WHERE stickycolid = ? AND ordernote <= ? AND ordernote > ?", array($newcolumnid, $newindex, $oldindex));
+
+                }
+
+            }
+            $DB->update_record('stickynotes_note', $newdata);
 
             $transaction->allow_commit();
         
